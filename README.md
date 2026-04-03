@@ -1,4 +1,4 @@
-# CrisisMesh AI 🚨
+# CrisisMesh AI 
 
 AI-powered Disaster Response & Victim Localization Platform
 
