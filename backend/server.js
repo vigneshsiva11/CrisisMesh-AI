@@ -17,6 +17,7 @@ app.use(express.json());
 
 const triageRoutes = require('./routes/triageRoutes')
 const sosRoutes = require('./routes/sosRoutes')
+const meshRoutes=require('./routes/meshRoutes')
 
 app.use('/api/triage',triageRoutes)
 app.use('/api/sos',sosRoutes)
@@ -24,6 +25,7 @@ app.use('/api/disasters', disasterRoutes);
 app.use('/api/victims', victimRoutes);
 app.use('/api/heatmaps', heatmapRoutes);
 app.use('/api/swarm', swarmRoutes);
+app.use('/api/swarm/mesh',meshRoutes)
 
 const server = http.createServer(app);
 const io = new Server(server);

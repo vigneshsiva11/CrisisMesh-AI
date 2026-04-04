@@ -1,3 +1,7 @@
-const router=require('express').Router();
-router.get('/',(req,res)=>res.json({nodes:[]}));
-module.exports=router;
+const router = require("express").Router();
+
+const controller = require("../controllers/swarmController");
+
+router.post("/path", controller.findPath);
+
+module.exports = router;
