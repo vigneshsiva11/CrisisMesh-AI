@@ -1,19 +1,22 @@
 import { useCrisis } from "../context/CrisisContext";
 import CrisisMapContainer from "../components/map/MapContainer";
 import SectionHeader from "../components/ui/SectionHeader";
+import AlertPanel from "../components/ui/AlertPanel";
 
 export default function SwarmControl() {
   const {
     victims,
+    priorityVictims,
     clusters,
     drones,
     paths,
     mesh,
     deadZones,
+    baseStation,
     startSimulation,
     resetSimulation,
-    triggerSignalSimulation,
     simulationRunning,
+    availableDrones,
   } = useCrisis();
 
   return (
@@ -38,13 +41,6 @@ export default function SwarmControl() {
             >
               Reset Simulation
             </button>
-            <button
-              type="button"
-              onClick={triggerSignalSimulation}
-              className="rounded-2xl border border-danger/30 bg-danger/15 px-4 py-3 text-sm font-medium text-danger transition hover:bg-danger/20"
-            >
-              Simulate Signal Detection
-            </button>
           </div>
         }
       />
@@ -57,6 +53,7 @@ export default function SwarmControl() {
           paths={paths}
           meshLines={mesh.lines}
           deadZones={deadZones}
+          baseStation={baseStation}
           height="h-[42rem]"
         />
 
@@ -67,14 +64,14 @@ export default function SwarmControl() {
               {simulationRunning ? "Swarm actively surveying sectors" : "Swarm paused for reset"}
             </h3>
             <p className="mt-3 text-sm text-slate-400">
-              Route animations represent A* path responses combined with overlay mesh redundancy.
+              Fixed victims are automatically identified by drones and pushed into the queue as the sweep progresses.
             </p>
           </div>
 
           <div className="glass-panel rounded-3xl p-5">
             <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Drone Registry</p>
             <div className="mt-4 space-y-3">
-              {drones.map((drone) => (
+              {(simulationRunning ? availableDrones : []).map((drone) => (
                 <div key={drone.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -87,8 +84,19 @@ export default function SwarmControl() {
                   </div>
                 </div>
               ))}
+              {!simulationRunning && (
+                <div className="rounded-2xl border border-dashed border-white/10 p-5 text-sm text-slate-400">
+                  No drones are deployed. Click Start Simulation to show all available drones on the map.
+                </div>
+              )}
             </div>
           </div>
+
+          <AlertPanel
+            victims={priorityVictims}
+            eyebrow="Detected Queue"
+            title="Drone-Identified People"
+          />
         </div>
       </div>
     </div>

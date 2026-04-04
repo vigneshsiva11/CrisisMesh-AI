@@ -8,38 +8,23 @@ import {
   getMeshStats,
   getSwarmPath,
   getVictims,
-  simulateSignal,
 } from "../services/api";
+import { baseStation, mockVictims } from "../services/mockData";
 
 const CrisisContext = createContext(null);
-
-function calculateGoldenHour(victims) {
-  const priorityVictim = victims
-    .filter((victim) => victim.status === "Priority-1")
-    .sort((a, b) => new Date(a.detectedAt) - new Date(b.detectedAt))[0];
-
-  const detectedAt = priorityVictim?.detectedAt;
-  if (!detectedAt) {
-    return 60 * 60;
-  }
-
-  const expiresAt = new Date(detectedAt).getTime() + 60 * 60 * 1000;
-  return Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
-}
 
 export function CrisisProvider({ children }) {
   const { isConnected, lastEvent } = useSocket();
   const [victims, setVictims] = useState([]);
   const [priorityVictims, setPriorityVictims] = useState([]);
   const [clusters, setClusters] = useState([]);
-  const [paths, setPaths] = useState([]);
-  const [drones, setDrones] = useState([]);
-  const [mesh, setMesh] = useState({ nodes: 0, connections: [], lines: [] });
+  const [availablePaths, setAvailablePaths] = useState([]);
+  const [availableDrones, setAvailableDrones] = useState([]);
+  const [availableMesh, setAvailableMesh] = useState({ nodes: 0, connections: [], lines: [] });
   const [deadZones, setDeadZones] = useState([]);
-  const [simulationRunning, setSimulationRunning] = useState(true);
+  const [simulationRunning, setSimulationRunning] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [lastRefresh, setLastRefresh] = useState(null);
-  const [countdown, setCountdown] = useState(60 * 60);
+  const [detectedVictimIds, setDetectedVictimIds] = useState([]);
 
   const refreshAll = async () => {
     setIsLoading(true);
@@ -64,15 +49,12 @@ export function CrisisProvider({ children }) {
     const meshData = await getMeshStats(droneData);
 
     setVictims(victimList);
-    setPriorityVictims(
-      victimList.filter((victim) => victim.status === "Priority-1").slice(0, 6),
-    );
+    setPriorityVictims([]);
     setClusters(clusterData);
-    setPaths(pathData);
-    setDrones(droneData);
-    setMesh(meshData);
+    setAvailablePaths(pathData);
+    setAvailableDrones(droneData);
+    setAvailableMesh(meshData);
     setDeadZones(deadZoneData);
-    setLastRefresh(new Date());
     setIsLoading(false);
   };
 
@@ -89,15 +71,6 @@ export function CrisisProvider({ children }) {
 
     return () => window.clearInterval(timer);
   }, [simulationRunning]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setCountdown(calculateGoldenHour(victims));
-    }, 1000);
-
-    setCountdown(calculateGoldenHour(victims));
-    return () => window.clearInterval(timer);
-  }, [victims]);
 
   useEffect(() => {
     if (!lastEvent?.payload) {
@@ -121,6 +94,8 @@ export function CrisisProvider({ children }) {
         status: victim.status || "Priority-1",
         urgencyScore: victim.urgencyScore || 95,
         signalStrength: victim.signalStrength || 90,
+        kmeansCluster: victim.kmeansCluster ?? index % 4,
+        detectedBy: victim.detectedBy || "Rapid Response Drone",
         detectedAt: victim.detectedAt || new Date().toISOString(),
       }));
 
@@ -129,35 +104,65 @@ export function CrisisProvider({ children }) {
   }, [lastEvent]);
 
   useEffect(() => {
-    setPriorityVictims(victims.filter((victim) => victim.status === "Priority-1").slice(0, 6));
-  }, [victims]);
+    const queue = victims
+      .filter((victim) => detectedVictimIds.includes(victim.id))
+      .sort((a, b) => b.urgencyScore - a.urgencyScore);
+    setPriorityVictims(queue);
+  }, [victims, detectedVictimIds]);
 
-  const triggerSignalSimulation = async () => {
-    const newVictim = await simulateSignal();
-    setVictims((current) =>
-      [newVictim, ...current]
-        .filter(
-          (victim, index, array) => array.findIndex((item) => item.id === victim.id) === index,
-        )
-        .sort((a, b) => b.urgencyScore - a.urgencyScore),
-    );
+  useEffect(() => {
+    if (!simulationRunning || !victims.length) {
+      return undefined;
+    }
+
+    const fixedSet = mockVictims
+      .map((person) => victims.find((victim) => victim.id === person.id))
+      .filter(Boolean)
+      .slice(0, 4);
+
+    let cursor = 0;
+    const timer = window.setInterval(() => {
+      if (cursor >= fixedSet.length) {
+        window.clearInterval(timer);
+        return;
+      }
+
+      const nextVictim = fixedSet[cursor];
+      cursor += 1;
+
+      setDetectedVictimIds((current) =>
+        current.includes(nextVictim.id) ? current : [...current, nextVictim.id],
+      );
+    }, 2500);
+
+    return () => window.clearInterval(timer);
+  }, [simulationRunning, victims]);
+
+  const startSimulation = () => {
+    setDetectedVictimIds([]);
+    setSimulationRunning(true);
   };
 
-  const startSimulation = () => setSimulationRunning(true);
-  const resetSimulation = async () => {
+  const resetSimulation = () => {
     setSimulationRunning(false);
-    await refreshAll();
+    setDetectedVictimIds([]);
   };
+
+  const activeDrones = simulationRunning ? availableDrones : [];
+  const activePaths = simulationRunning ? availablePaths : [];
+  const activeMesh = simulationRunning
+    ? availableMesh
+    : { nodes: 0, connections: [], lines: [] };
 
   const stats = useMemo(
     () => ({
       totalVictims: victims.length,
-      activeDrones: drones.length,
+      activeDrones: activeDrones.length,
       priorityAlerts: priorityVictims.length,
       activeClusters: clusters.length,
-      meshConnections: mesh.connections.length,
+      meshConnections: activeMesh.connections.length,
     }),
-    [victims, drones, priorityVictims, clusters, mesh],
+    [victims, activeDrones, priorityVictims, clusters, activeMesh],
   );
 
   const value = useMemo(
@@ -165,35 +170,33 @@ export function CrisisProvider({ children }) {
       victims,
       priorityVictims,
       clusters,
-      paths,
-      drones,
-      mesh,
+      paths: activePaths,
+      drones: activeDrones,
+      availableDrones,
+      mesh: activeMesh,
       deadZones,
       stats,
-      countdown,
       isConnected,
       isLoading,
       simulationRunning,
-      lastRefresh,
+      baseStation,
       refreshAll,
       startSimulation,
       resetSimulation,
-      triggerSignalSimulation,
     }),
     [
       victims,
       priorityVictims,
       clusters,
-      paths,
-      drones,
-      mesh,
+      activePaths,
+      activeDrones,
+      availableDrones,
+      activeMesh,
       deadZones,
       stats,
-      countdown,
       isConnected,
       isLoading,
       simulationRunning,
-      lastRefresh,
     ],
   );
 

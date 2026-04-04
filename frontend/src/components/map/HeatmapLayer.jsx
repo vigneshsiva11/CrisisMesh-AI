@@ -1,10 +1,9 @@
 import { Circle } from "react-leaflet";
 
-function getColor(intensity) {
-  if (intensity >= 0.8) return "#ef4444";
-  if (intensity >= 0.55) return "#f97316";
-  if (intensity >= 0.3) return "#fbbf24";
-  return "#38bdf8";
+function getPriorityColor(status) {
+  if (status === "Priority-1") return "#ef4444";
+  if (status === "Priority-2") return "#fbbf24";
+  return "#22c55e";
 }
 
 export default function HeatmapLayer({ victims = [], enabled = true }) {
@@ -14,16 +13,17 @@ export default function HeatmapLayer({ victims = [], enabled = true }) {
 
   return victims.map((victim) => {
     const intensity = Math.min(1, victim.urgencyScore / 100);
+    const color = getPriorityColor(victim.status);
     return (
       <Circle
         key={`heat-${victim.id}`}
         center={[victim.coordinates.lat, victim.coordinates.lng]}
-        radius={220 + intensity * 280}
+        radius={200 + intensity * 260 + (victim.kmeansCluster ?? 0) * 20}
         pathOptions={{
-          color: getColor(intensity),
-          fillColor: getColor(intensity),
+          color,
+          fillColor: color,
           fillOpacity: 0.22,
-          opacity: 0.25,
+          opacity: 0.3,
           weight: 1,
         }}
       />

@@ -2,7 +2,6 @@ import { useCrisis } from "../context/CrisisContext";
 import AlertPanel from "../components/ui/AlertPanel";
 import SectionHeader from "../components/ui/SectionHeader";
 import StatCard from "../components/ui/StatCard";
-import TimerCard from "../components/ui/TimerCard";
 import LoadingSkeleton from "../components/ui/LoadingSkeleton";
 import CrisisMapContainer from "../components/map/MapContainer";
 
@@ -16,7 +15,7 @@ export default function Dashboard() {
     paths,
     mesh,
     deadZones,
-    countdown,
+    baseStation,
     isLoading,
   } = useCrisis();
 
@@ -68,7 +67,6 @@ export default function Dashboard() {
 
       <div className="grid gap-6 xl:grid-cols-[1.6fr_0.9fr]">
         <div className="space-y-6">
-          <TimerCard seconds={countdown} />
           <CrisisMapContainer
             victims={victims}
             clusters={clusters}
@@ -76,6 +74,7 @@ export default function Dashboard() {
             paths={paths}
             meshLines={mesh.lines}
             deadZones={deadZones}
+            baseStation={baseStation}
             height="h-[34rem]"
           />
         </div>

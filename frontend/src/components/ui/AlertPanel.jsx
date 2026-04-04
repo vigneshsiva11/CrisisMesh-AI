@@ -1,10 +1,14 @@
-export default function AlertPanel({ victims = [] }) {
+export default function AlertPanel({
+  victims = [],
+  eyebrow = "Priority Queue",
+  title = "Priority-1 Victims",
+}) {
   return (
     <div className="glass-panel rounded-3xl p-5">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-danger/80">Priority Queue</p>
-          <h3 className="mt-1 text-xl font-semibold text-white">Priority-1 Victims</h3>
+          <p className="text-xs uppercase tracking-[0.25em] text-danger/80">{eyebrow}</p>
+          <h3 className="mt-1 text-xl font-semibold text-white">{title}</h3>
         </div>
         <span className="rounded-full border border-danger/30 bg-danger/10 px-3 py-1 text-xs text-danger">
           Auto-updating
@@ -34,13 +38,8 @@ export default function AlertPanel({ victims = [] }) {
                 <p className="mt-1 font-medium text-white">{victim.signalStrength}%</p>
               </div>
               <div className="rounded-2xl bg-midnight/50 p-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Detected</p>
-                <p className="mt-1 font-medium text-white">
-                  {new Date(victim.detectedAt).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Drone</p>
+                <p className="mt-1 font-medium text-white">{victim.detectedBy || "Unknown Unit"}</p>
               </div>
             </div>
           </div>

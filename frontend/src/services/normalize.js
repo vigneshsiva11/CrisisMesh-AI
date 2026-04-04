@@ -1,4 +1,5 @@
 import {
+  baseStation,
   mockClusters,
   mockDeadZones,
   mockDrones,
@@ -9,6 +10,12 @@ import {
 
 function hashId(prefix, value) {
   return `${prefix}-${String(value).replace(/[^a-zA-Z0-9]/g, "").slice(0, 8)}`;
+}
+
+function getPriorityStatus(score) {
+  if (score >= 85) return "Priority-1";
+  if (score >= 60) return "Priority-2";
+  return "Priority-3";
 }
 
 export function parseCoordinates(coordinates, index = 0) {
@@ -51,17 +58,25 @@ export function normalizeVictims(payload) {
     const urgencyScore =
       victim.urgencyScore ??
       victim.triageScore ??
-      (victim.status === "Priority-1" ? 90 - index * 2 : 58 + index * 4);
+      (victim.status === "Priority-1" ? 92 - index * 2 : 58 + index * 4);
     const signalStrength = victim.signalStrength ?? 50 + ((index * 13) % 45);
+    const kmeansCluster = victim.kmeansCluster ?? index % 4;
 
     return {
       id: victim.id || victim._id || hashId("V", `${coordinates.lat}-${coordinates.lng}-${index}`),
       coordinates,
-      status: victim.status || "Priority-2",
+      status: victim.status || getPriorityStatus(urgencyScore),
       urgencyScore,
       signalStrength,
+      kmeansCluster,
+      detectedBy:
+        victim.detectedBy ||
+        mockDrones[kmeansCluster % mockDrones.length]?.label ||
+        "Recon Unit",
       detectedAt:
-        victim.detectedAt || victim.timestamp || new Date(Date.now() - (index + 5) * 600000).toISOString(),
+        victim.detectedAt ||
+        victim.timestamp ||
+        new Date(Date.now() - (index + 5) * 600000).toISOString(),
     };
   });
 }
@@ -72,7 +87,7 @@ export function buildClustersFromVictims(victims) {
   }
 
   const buckets = victims.reduce((accumulator, victim) => {
-    const key = `${victim.coordinates.lat.toFixed(2)}-${victim.coordinates.lng.toFixed(2)}`;
+    const key = String(victim.kmeansCluster ?? 0);
     if (!accumulator[key]) {
       accumulator[key] = [];
     }
@@ -80,17 +95,18 @@ export function buildClustersFromVictims(victims) {
     return accumulator;
   }, {});
 
-  return Object.entries(buckets).map(([key, members], index) => {
+  return Object.entries(buckets).map(([clusterKey, members], index) => {
     const lat = members.reduce((sum, item) => sum + item.coordinates.lat, 0) / members.length;
     const lng = members.reduce((sum, item) => sum + item.coordinates.lng, 0) / members.length;
     const priorityScore = members.filter((item) => item.status === "Priority-1").length;
 
     return {
-      id: `CL-${index + 1}-${key}`,
+      id: `CL-${index + 1}`,
       center: { lat, lng },
       victimCount: members.length,
       priorityScore,
-      densityScore: Number(Math.min(1, members.length / 8 + priorityScore / 10).toFixed(2)),
+      densityScore: Number(Math.min(1, members.length / 4 + priorityScore / 5).toFixed(2)),
+      kmeansCluster: Number(clusterKey),
     };
   });
 }
@@ -113,9 +129,10 @@ export function normalizeClusters(payload, victims = []) {
       (
         cluster.densityScore ??
         cluster.density ??
-        Math.min(1, (cluster.victimCount ?? cluster.size ?? 1) / 10)
+        Math.min(1, (cluster.victimCount ?? cluster.size ?? 1) / 4)
       ).toFixed(2),
     ),
+    kmeansCluster: cluster.kmeansCluster ?? index,
   }));
 }
 
@@ -125,20 +142,21 @@ export function normalizeSwarmPath(payload) {
   }
 
   if (Array.isArray(payload?.path) && payload.path.length) {
-    return [
-      {
-        droneId: "DR-01",
-        route: payload.path.map((point, index) => {
-          if (Array.isArray(point)) {
-            return [Number(point[0]), Number(point[1])];
-          }
-          return [
-            point.lat ?? point.y ?? mockPaths[0].route[index % mockPaths[0].route.length][0],
-            point.lng ?? point.x ?? mockPaths[0].route[index % mockPaths[0].route.length][1],
-          ];
-        }),
-      },
-    ];
+    return mockPaths.map((path, index) => ({
+      ...path,
+      route:
+        index === 0
+          ? payload.path.map((point, pointIndex) => {
+              if (Array.isArray(point)) {
+                return [Number(point[0]), Number(point[1])];
+              }
+              return [
+                point.lat ?? point.y ?? mockPaths[0].route[pointIndex % mockPaths[0].route.length][0],
+                point.lng ?? point.x ?? mockPaths[0].route[pointIndex % mockPaths[0].route.length][1],
+              ];
+            })
+          : path.route,
+    }));
   }
 
   return mockPaths;
@@ -146,7 +164,8 @@ export function normalizeSwarmPath(payload) {
 
 export function normalizeMesh(payload, drones = mockDrones) {
   const stats = payload?.stats || payload || {};
-  const idLookup = new Map(drones.map((drone) => [drone.id, drone]));
+  const allNodes = [baseStation, ...drones];
+  const idLookup = new Map(allNodes.map((node) => [node.id, node]));
 
   const connections = Array.isArray(stats.connections)
     ? stats.connections
@@ -168,6 +187,7 @@ export function normalizeMesh(payload, drones = mockDrones) {
             [from.lat, from.lng],
             [to.lat, to.lng],
           ],
+          isBaseLink: fromId === baseStation.id || toId === baseStation.id,
         };
       })
       .filter(Boolean),

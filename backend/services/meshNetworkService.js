@@ -97,4 +97,4 @@ const controller = {
   },
 };
 
-module.exports = { meshNetwork,
+module.exports = { meshNetwork };

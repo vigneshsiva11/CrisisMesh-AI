@@ -8,6 +8,7 @@ import DroneLayer from "./DroneLayer";
 import MeshLayer from "./MeshLayer";
 import DeadZoneLayer from "./DeadZoneLayer";
 import LayerToggle from "./LayerToggle";
+import BaseLayer from "./BaseLayer";
 import { MAP_CENTER } from "../../services/config";
 
 export default function CrisisMapContainer({
@@ -17,6 +18,7 @@ export default function CrisisMapContainer({
   paths = [],
   meshLines = [],
   deadZones = [],
+  baseStation,
   height = "h-[32rem]",
   allowToggles = true,
   animateDrones = true,
@@ -70,6 +72,7 @@ export default function CrisisMapContainer({
           animate={animateDrones}
         />
         <MeshLayer lines={meshLines} enabled={layers.mesh} />
+        <BaseLayer baseStation={baseStation} enabled />
         <DeadZoneLayer zones={deadZones} enabled={layers.deadZones} />
       </LeafletMap>
     </div>

@@ -36,6 +36,7 @@ export default function VictimMonitor() {
                   <th className="px-3 py-3">Status</th>
                   <th className="px-3 py-3">Urgency</th>
                   <th className="px-3 py-3">Signal</th>
+                  <th className="px-3 py-3">Drone</th>
                   <th className="px-3 py-3">Coordinates</th>
                   <th className="px-3 py-3">Detected</th>
                 </tr>
@@ -59,6 +60,7 @@ export default function VictimMonitor() {
                     </td>
                     <td className="px-3 py-4">{victim.urgencyScore}</td>
                     <td className="px-3 py-4">{victim.signalStrength}%</td>
+                    <td className="px-3 py-4">{victim.detectedBy || "Unknown Unit"}</td>
                     <td className="px-3 py-4">
                       {victim.coordinates.lat.toFixed(4)}, {victim.coordinates.lng.toFixed(4)}
                     </td>

@@ -12,7 +12,7 @@ const mobileLinks = [
 
 export default function Navbar() {
   const currentTime = useCurrentTime();
-  const { isConnected, simulationRunning, lastRefresh } = useCrisis();
+  const { isConnected, simulationRunning } = useCrisis();
 
   return (
     <header className="sticky top-0 z-[900] border-b border-white/10 bg-midnight/70 px-4 py-4 backdrop-blur-xl sm:px-6 lg:px-8">
@@ -29,7 +29,7 @@ export default function Navbar() {
             pulse={simulationRunning}
           />
           <StatusBadge
-            label={isConnected ? "Backend Connected" : "Backend Sync Limited"}
+            label={isConnected ? "Connected" : "Sync Limited"}
             tone={isConnected ? "info" : "danger"}
             pulse={!isConnected}
           />
@@ -41,14 +41,6 @@ export default function Navbar() {
                 minute: "2-digit",
                 second: "2-digit",
               })}
-            </p>
-          </div>
-          <div className="glass-panel rounded-2xl px-4 py-2 text-right">
-            <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Last Sync</p>
-            <p className="text-sm font-medium text-white">
-              {lastRefresh
-                ? lastRefresh.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                : "Pending"}
             </p>
           </div>
         </div>

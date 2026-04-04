@@ -86,6 +86,8 @@ export async function simulateSignal(payload = {}) {
         status: "Priority-1",
         signalStrength: 91,
         urgencyScore: 98,
+        kmeansCluster: Math.floor(Math.random() * 4),
+        detectedBy: "Rapid Response Drone",
         coordinates: {
           lat: 20.6037 + Math.random() * 0.01,
           lng: 78.9529 + Math.random() * 0.01,
