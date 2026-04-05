@@ -1,4 +1,4 @@
-# CrisisMesh AI 
+# CrisisMesh AI
 
 AI-powered Disaster Response & Victim Localization Platform
 
@@ -30,27 +30,60 @@ CrisisMesh AI simulates a decentralized emergency intelligence system that combi
 
 The platform helps emergency responders visualize disaster zones, identify priority rescue locations, and coordinate operations effectively.
 
+## Approach
+
+The system follows an intelligent workflow to maximize rescue efficiency:
+
+```
+Finds victims automatically
+     |
+Groups them into rescue zones
+     |
+Decides who needs help first
+     |
+Guides drones along the best path
+     |
+Keeps communication alive without internet
+     |
+Shows everything on a live dashboard
+```
+
+1. **Victim Detection** - Automatically locates and identifies potential victim locations using AI prediction
+2. **Zone Clustering** - Groups victims into geographic rescue zones for efficient coordination
+3. **AI Triage Engine** - Prioritizes victims based on urgency and risk scores
+4. **Swarm Pathfinding** - Routes autonomous drones using optimized path algorithms (A\* navigation)
+5. **Mesh Communication** - Maintains decentralized communication without reliance on internet infrastructure
+6. **Real-time Dashboard** - Displays live heatmaps and victim locations for instant situational awareness
+
 ## Key Features
 
 ### Autonomous Swarm Simulation
 
-Simulates distributed nodes that collaboratively scan disaster zones and provide spatial coverage insights.
+Simulates distributed nodes (drones) that collaboratively scan disaster zones and provide spatial coverage insights. Uses A\* pathfinding for optimal navigation.
 
-### AI-powered Risk Heatmap
+### AI-powered Triage Engine
 
-Uses clustering algorithms to identify high-risk areas based on simulated signal patterns and spatial data.
+Automatically analyzes SOS beacons and victim data to generate urgency scores, prioritizing high-risk cases for rescue teams.
 
-### Real-time Alerts
+### Risk Heatmap Clustering
 
-Socket-based communication enables live updates of victim locations and risk zones.
+Uses K-means clustering algorithms to identify high-risk rescue zones based on victim concentrations and spatial data distribution.
+
+### Mesh Network Communication
+
+Enables decentralized peer-to-peer communication between rescue operations without reliance on centralized internet infrastructure.
+
+### Real-time Alerts & SOS Beacon Parsing
+
+Socket.io-based live updates deliver victim alerts, priority classifications, and beacon signal patterns to emergency responders.
 
 ### Offline-first Support (PWA)
 
-Allows basic functionality even when internet connectivity is limited.
+Allows basic functionality even when internet connectivity is limited or completely unavailable in disaster zones.
 
 ### Interactive Disaster Map
 
-Map-based dashboard visualizes affected zones and predicted victim clusters.
+Mapbox/Leaflet-based dashboard visualizes affected zones, victim clusters, drone positions, and real-time heatmaps for situational awareness.
 
 ## System Architecture
 
@@ -102,51 +135,91 @@ Database (MongoDB)
 
 ```text
 CrisisMesh-AI/
-├── frontend/
+├── frontend/                      # React + Mapbox dashboard
 │   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── services/
-│   │   ├── hooks/
-│   │   └── assets/
+│   │   ├── components/           # UI components
+│   │   ├── pages/                # Route pages
+│   │   ├── context/              # State management
+│   │   ├── services/             # API clients
+│   │   ├── hooks/                # Custom React hooks
+│   │   └── assets/               # Static assets
 │   └── public/
-├── backend/
+├── backend/                       # Node.js Express API
+│   ├── controllers/              # Route handlers (disaster, victim, triage, SOS, swarm, heatmap)
+│   ├── services/                 # Business logic (clustering, A* pathfinding, triage)
+│   ├── models/                   # MongoDB schemas
+│   ├── routes/                   # API endpoints
+│   ├── sockets/                  # Real-time Socket.io handlers
+│   ├── middleware/               # Express middleware
+│   ├── utils/                    # Helper utilities
+│   └── server.js                 # Entry point
+├── ai/                           # Optional AI module (Python)
 │   ├── src/
-│   │   ├── routes/
-│   │   ├── controllers/
-│   │   ├── services/
-│   │   ├── models/
-│   │   ├── sockets/
-│   │   ├── middleware/
-│   │   └── utils/
-├── ai/
-│   ├── src/
-│   │   ├── ai/
-│   │   ├── pipelines/
+│   │   ├── ai/                   # ML models & prediction
+│   │   ├── pipelines/            # Data processing
 │   │   └── utils/
 │   └── api/
-├── shared/
+├── shared/                        # Shared types & constants
 │   ├── models/
 │   └── constants/
-└── config/
+└── config/                        # Configuration files
     └── env/
 ```
 
-## MVP Scope
+## Core Services & APIs
 
-- Disaster map visualization
-- Heatmap prediction prototype
-- Swarm simulation demo
-- Real-time alert system
-- Basic offline support
+### Victim Management
+
+- Auto-detect and locate victims in disaster zones
+- Store victim data with coordinates and status
+- Track victim IDs and metadata
+
+### AI Triage Engine
+
+- `POST /api/triage/score` - Calculate victim urgency scores
+- Analyze SOS beacon signals for priority ranking
+- Real-time risk assessment and classification
+
+### SOS Beacon Parsing
+
+- `POST /api/sos/parse` - Parse incoming beacon signals
+- Extract location and urgency from signal patterns
+- Queue victims for rescue based on priority
+
+### Heatmap & Clustering
+
+- `GET /api/heatmaps/generate` - Generate risk zone heatmaps
+- K-means clustering for victim zone grouping
+- Dynamic heatmap updates based on new victim data
+
+### Swarm & Pathfinding
+
+- `POST /api/swarm/simulate` - Simulate drone coverage and movement
+- A\* algorithm for optimal drone routing
+- Route optimization to minimize rescue time
+
+### Mesh Network
+
+- `GET /api/swarm/mesh` - Mesh network status and topology
+- Decentralized communication simulation
+- Support for offline peer-to-peer coordination
+
+### Real-time Alerts
+
+- Socket.io events for live victim updates
+- Push notifications for high-priority cases
+- Live dashboard synchronization
 
 ## How It Works
 
-1. Disaster area data is processed by the AI module.
-2. Clustering logic generates a risk heatmap.
-3. Swarm simulation provides coverage visualization.
-4. Backend streams updates via Socket.io.
-5. Frontend dashboard displays real-time insights.
+1. **Victim Detection & SOS Processing** - System detects and parses SOS beacon signals from affected areas
+2. **Risk Assessment** - AI triage engine analyzes each victim's urgency based on signal strength, location, and contextual factors
+3. **Zone Clustering** - K-means algorithm groups nearby victims into manageable rescue zones
+4. **Priority Ranking** - Victims are ranked by urgency score for optimal rescue sequencing
+5. **Swarm Planning** - Autonomous drones receive pathfinding directions using A\* navigation to optimal rescue points
+6. **Real-time Updates** - Backend streams live updates via Socket.io to dashboard displaying heatmaps and drone positions
+7. **Mesh Communication** - Network operates as decentralized mesh, maintaining connectivity even if central infrastructure fails
+8. **Dashboard Visualization** - Frontend displays live map with victim markers, heatmaps, drone routes, and priority alerts
 
 ## Future Improvements
 

@@ -9,9 +9,18 @@ import {
   getSwarmPath,
   getVictims,
 } from "../services/api";
-import { baseStation, mockVictims } from "../services/mockData";
+import { baseStation } from "../services/mockData";
 
 const CrisisContext = createContext(null);
+const SIMULATION_QUEUE_SIZE = 4;
+
+function getSimulationQueueCandidates(victims, limit = SIMULATION_QUEUE_SIZE) {
+  const sortedVictims = [...victims].sort((a, b) => b.urgencyScore - a.urgencyScore);
+  const priorityOneVictims = sortedVictims.filter((victim) => victim.status === "Priority-1");
+  const fallbackVictims = sortedVictims.filter((victim) => victim.status !== "Priority-1");
+
+  return [...priorityOneVictims, ...fallbackVictims].slice(0, limit);
+}
 
 export function CrisisProvider({ children }) {
   const { isConnected, lastEvent } = useSocket();
@@ -49,7 +58,6 @@ export function CrisisProvider({ children }) {
     const meshData = await getMeshStats(droneData);
 
     setVictims(victimList);
-    setPriorityVictims([]);
     setClusters(clusterData);
     setAvailablePaths(pathData);
     setAvailableDrones(droneData);
@@ -115,31 +123,35 @@ export function CrisisProvider({ children }) {
       return undefined;
     }
 
-    const fixedSet = mockVictims
-      .map((person) => victims.find((victim) => victim.id === person.id))
-      .filter(Boolean)
-      .slice(0, 4);
+    const queueCandidates = getSimulationQueueCandidates(victims);
+    if (!queueCandidates.length) {
+      return undefined;
+    }
 
-    let cursor = 0;
-    const timer = window.setInterval(() => {
-      if (cursor >= fixedSet.length) {
-        window.clearInterval(timer);
-        return;
+    setDetectedVictimIds((current) => {
+      if (current.length >= SIMULATION_QUEUE_SIZE) {
+        return current;
       }
 
-      const nextVictim = fixedSet[cursor];
-      cursor += 1;
+      const currentIds = new Set(current);
+      const nextIds = [...current];
 
-      setDetectedVictimIds((current) =>
-        current.includes(nextVictim.id) ? current : [...current, nextVictim.id],
-      );
-    }, 2500);
+      queueCandidates.forEach((victim) => {
+        if (nextIds.length < SIMULATION_QUEUE_SIZE && !currentIds.has(victim.id)) {
+          nextIds.push(victim.id);
+          currentIds.add(victim.id);
+        }
+      });
 
-    return () => window.clearInterval(timer);
+      return nextIds;
+    });
+
+    return undefined;
   }, [simulationRunning, victims]);
 
   const startSimulation = () => {
-    setDetectedVictimIds([]);
+    const initialQueue = getSimulationQueueCandidates(victims).map((victim) => victim.id);
+    setDetectedVictimIds(initialQueue);
     setSimulationRunning(true);
   };
 

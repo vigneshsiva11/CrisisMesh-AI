@@ -1,5 +1,3 @@
-const MAP_KEY = (x, y) => `${x},${y}`;
-
 const MeshNetwork = (radius = 100) => {
   const nodes = new Map();
   const graph = new Map();
@@ -61,40 +59,9 @@ const MeshNetwork = (radius = 100) => {
     removeDrone: removeNode,
     findPath,
     updateGraph,
+    
     stats,
   };
 };
 
-const meshNetwork = MeshNetwork();
-const controller = {
-  addDrone: (req, res) => {
-    const { id, x, y } = req.body;
-    if (!id || x == null || y == null) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-    meshNetwork.addDrone(id, x, y);
-    res.json({ success: true, id });
-  },
-  removeDrone: (req, res) => {
-    const { id } = req.body;
-    if (!id) {
-      return res.status(400).json({ error: 'Missing id' });
-    }
-    meshNetwork.removeDrone(id);
-    res.json({ success: true, id });
-  },
-  findPath: (req, res) => {
-    const { startId, endId } = req.body;
-    if (!startId || !endId) {
-      return res.status(400).json({ error: 'Missing startId or endId' });
-    }
-    const path = meshNetwork.findPath(startId, endId);
-    res.json({ path: path || [], success: !!path });
-  },
-  stats: (req, res) => {
-    const stats = meshNetwork.stats();
-    res.json({ success: true, stats });
-  },
-};
-
-module.exports = { meshNetwork };
+module.exports = MeshNetwork();
