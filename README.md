@@ -118,16 +118,8 @@ Database (MongoDB)
 - MongoDB (Mongoose)
 - REST APIs
 
-### AI Module
-
-- Python
-- FastAPI
-- Scikit-learn
-- NumPy
-
 ### Tools
 
-- OpenRouter / Claude
 - Git
 - VS Code
 
