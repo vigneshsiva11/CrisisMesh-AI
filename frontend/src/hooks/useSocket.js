@@ -2,17 +2,23 @@ import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { SOCKET_URL } from "../services/config";
 
+let sharedSocket = null;
+
 export default function useSocket() {
   const socketRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState(null);
 
   useEffect(() => {
-    const socket = io(SOCKET_URL, {
-      transports: ["websocket", "polling"],
-      autoConnect: true,
-      reconnection: true,
-    });
+    if (!sharedSocket) {
+      sharedSocket = io(SOCKET_URL, {
+        transports: ["polling", "websocket"],
+        autoConnect: true,
+        reconnection: true,
+      });
+    }
+
+    const socket = sharedSocket;
 
     socketRef.current = socket;
 
@@ -34,7 +40,6 @@ export default function useSocket() {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.offAny(onAny);
-      socket.disconnect();
     };
   }, []);
 

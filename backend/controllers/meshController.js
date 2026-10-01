@@ -17,5 +17,11 @@ exports.findPath = (req, res) => {
 };
 
 exports.stats = (req, res) => {
-  res.json(mesh.stats());
+  try {
+    res.json(mesh.stats());
+  } catch (error) {
+    res.status(500).json({
+      error: error.message || "Failed to load mesh stats",
+    });
+  }
 };

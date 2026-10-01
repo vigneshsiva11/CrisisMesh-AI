@@ -51,7 +51,9 @@ const MeshNetwork = (radius = 100) => {
 
   const stats = () => ({
     nodes: nodes.size,
-    connections: Array.from(graph.values()).reduce((a, b) => a + b.size, 0),
+    connections: Array.from(graph.entries()).flatMap(([id, neighbors]) =>
+      Array.from(neighbors).map((neighborId) => [id, neighborId]),
+    ),
   });
 
   return {

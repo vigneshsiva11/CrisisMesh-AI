@@ -13,6 +13,8 @@ import { baseStation } from "../services/mockData";
 
 const CrisisContext = createContext(null);
 const SIMULATION_QUEUE_SIZE = 4;
+const VICTIM_REVEAL_DELAY_MS = 5000;
+const VICTIM_REVEAL_DURATION_MS = 7000;
 
 function getSimulationQueueCandidates(victims, limit = SIMULATION_QUEUE_SIZE) {
   const sortedVictims = [...victims].sort((a, b) => b.urgencyScore - a.urgencyScore);
@@ -32,6 +34,7 @@ export function CrisisProvider({ children }) {
   const [availableMesh, setAvailableMesh] = useState({ nodes: 0, connections: [], lines: [] });
   const [deadZones, setDeadZones] = useState([]);
   const [simulationRunning, setSimulationRunning] = useState(false);
+  const [victimIntelVisible, setVictimIntelVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [detectedVictimIds, setDetectedVictimIds] = useState([]);
 
@@ -123,43 +126,44 @@ export function CrisisProvider({ children }) {
       return undefined;
     }
 
-    const queueCandidates = getSimulationQueueCandidates(victims);
-    if (!queueCandidates.length) {
-      return undefined;
-    }
+    const revealTimer = window.setTimeout(() => {
+      const queueCandidates = getSimulationQueueCandidates(victims);
+      setVictimIntelVisible(true);
 
-    setDetectedVictimIds((current) => {
-      if (current.length >= SIMULATION_QUEUE_SIZE) {
-        return current;
+      if (!queueCandidates.length) {
+        return;
       }
 
-      const currentIds = new Set(current);
-      const nextIds = [...current];
+      setDetectedVictimIds(queueCandidates.map((victim) => victim.id));
+    }, VICTIM_REVEAL_DELAY_MS);
 
-      queueCandidates.forEach((victim) => {
-        if (nextIds.length < SIMULATION_QUEUE_SIZE && !currentIds.has(victim.id)) {
-          nextIds.push(victim.id);
-          currentIds.add(victim.id);
-        }
-      });
+    const hideTimer = window.setTimeout(() => {
+      setVictimIntelVisible(false);
+      setDetectedVictimIds([]);
+    }, VICTIM_REVEAL_DELAY_MS + VICTIM_REVEAL_DURATION_MS);
 
-      return nextIds;
-    });
-
-    return undefined;
+    return () => {
+      window.clearTimeout(revealTimer);
+      window.clearTimeout(hideTimer);
+    };
   }, [simulationRunning, victims]);
 
   const startSimulation = () => {
-    const initialQueue = getSimulationQueueCandidates(victims).map((victim) => victim.id);
-    setDetectedVictimIds(initialQueue);
+    setVictimIntelVisible(false);
+    setDetectedVictimIds([]);
     setSimulationRunning(true);
   };
 
   const resetSimulation = () => {
     setSimulationRunning(false);
+    setVictimIntelVisible(true);
     setDetectedVictimIds([]);
   };
 
+  const visibleVictims = simulationRunning && !victimIntelVisible ? [] : victims;
+  const visiblePriorityVictims =
+    simulationRunning && !victimIntelVisible ? [] : priorityVictims;
+  const visibleClusters = simulationRunning && !victimIntelVisible ? [] : clusters;
   const activeDrones = simulationRunning ? availableDrones : [];
   const activePaths = simulationRunning ? availablePaths : [];
   const activeMesh = simulationRunning
@@ -168,20 +172,20 @@ export function CrisisProvider({ children }) {
 
   const stats = useMemo(
     () => ({
-      totalVictims: victims.length,
+      totalVictims: visibleVictims.length,
       activeDrones: activeDrones.length,
-      priorityAlerts: priorityVictims.length,
-      activeClusters: clusters.length,
+      priorityAlerts: visiblePriorityVictims.length,
+      activeClusters: visibleClusters.length,
       meshConnections: activeMesh.connections.length,
     }),
-    [victims, activeDrones, priorityVictims, clusters, activeMesh],
+    [visibleVictims, activeDrones, visiblePriorityVictims, visibleClusters, activeMesh],
   );
 
   const value = useMemo(
     () => ({
-      victims,
-      priorityVictims,
-      clusters,
+      victims: visibleVictims,
+      priorityVictims: visiblePriorityVictims,
+      clusters: visibleClusters,
       paths: activePaths,
       drones: activeDrones,
       availableDrones,
@@ -197,9 +201,9 @@ export function CrisisProvider({ children }) {
       resetSimulation,
     }),
     [
-      victims,
-      priorityVictims,
-      clusters,
+      visibleVictims,
+      visiblePriorityVictims,
+      visibleClusters,
       activePaths,
       activeDrones,
       availableDrones,

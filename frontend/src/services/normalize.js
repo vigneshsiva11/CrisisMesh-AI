@@ -166,31 +166,70 @@ export function normalizeMesh(payload, drones = mockDrones) {
   const stats = payload?.stats || payload || {};
   const allNodes = [baseStation, ...drones];
   const idLookup = new Map(allNodes.map((node) => [node.id, node]));
+  const rawConnections =
+    Array.isArray(stats.connections) && stats.connections.length
+      ? stats.connections
+      : mockMeshStats.connections;
 
-  const connections = Array.isArray(stats.connections)
-    ? stats.connections
-    : mockMeshStats.connections;
+  const connections = rawConnections
+    .map((connection) => {
+      if (Array.isArray(connection) && connection.length >= 2) {
+        return [connection[0], connection[1]];
+      }
+
+      if (connection && typeof connection === "object") {
+        const fromId = connection.fromId ?? connection.source ?? connection.from;
+        const toId = connection.toId ?? connection.target ?? connection.to;
+
+        if (fromId && toId) {
+          return [fromId, toId];
+        }
+      }
+
+      return null;
+    })
+    .filter(Boolean);
+
+  const lines = connections
+    .map(([fromId, toId]) => {
+      const from = idLookup.get(fromId);
+      const to = idLookup.get(toId);
+      if (!from || !to) {
+        return null;
+      }
+      return {
+        id: `${fromId}-${toId}`,
+        positions: [
+          [from.lat, from.lng],
+          [to.lat, to.lng],
+        ],
+        isBaseLink: fromId === baseStation.id || toId === baseStation.id,
+      };
+    })
+    .filter(Boolean);
+
+  const fallbackLines = mockMeshStats.connections
+    .map(([fromId, toId]) => {
+      const from = idLookup.get(fromId);
+      const to = idLookup.get(toId);
+      if (!from || !to) {
+        return null;
+      }
+      return {
+        id: `${fromId}-${toId}`,
+        positions: [
+          [from.lat, from.lng],
+          [to.lat, to.lng],
+        ],
+        isBaseLink: fromId === baseStation.id || toId === baseStation.id,
+      };
+    })
+    .filter(Boolean);
 
   return {
-    nodes: stats.nodes ?? drones.length,
-    connections,
-    lines: connections
-      .map(([fromId, toId]) => {
-        const from = idLookup.get(fromId);
-        const to = idLookup.get(toId);
-        if (!from || !to) {
-          return null;
-        }
-        return {
-          id: `${fromId}-${toId}`,
-          positions: [
-            [from.lat, from.lng],
-            [to.lat, to.lng],
-          ],
-          isBaseLink: fromId === baseStation.id || toId === baseStation.id,
-        };
-      })
-      .filter(Boolean),
+    nodes: stats.nodes > 0 ? stats.nodes : drones.length,
+    connections: lines.length ? connections : mockMeshStats.connections,
+    lines: lines.length ? lines : fallbackLines,
   };
 }
 
